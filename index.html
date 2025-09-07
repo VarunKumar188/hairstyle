@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hairstyle Recommender</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-image: linear-gradient(to bottom right, #1E3A8A, #14B8A6);
+            background-size: cover;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            min-height: 100vh;
+        }
+        .card {
+            background-image: linear-gradient(to top left, #BFDBFE, #A78BFA);
+            backdrop-filter: blur(10px);
+            animation: fadeInScale 0.7s ease-out forwards;
+        }
+        .loading-spinner {
+            border-top-color: #EC4899;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4">
+    <div class="container mx-auto card rounded-3xl shadow-2xl p-6 md:p-10 text-center">
+        <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">Hairstyle Recommender</h1>
+        <p class="text-lg text-white mb-8">
+            Upload a clear photo of your face to get a personalized hairstyle suggestion.
+        </p>
+
+        <!-- Image Upload Input -->
+        <label for="file-upload" class="inline-flex cursor-pointer bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-1">
+            Choose Image
+            <input id="file-upload" type="file" accept="image/*" class="hidden">
+        </label>
+
+        <!-- Image Preview and Controls -->
+        <div id="preview-controls-container" class="mt-8 hidden flex flex-col items-center">
+            <div id="image-preview-container" class="w-full max-w-sm mx-auto">
+                <img id="image-preview" src="#" alt="Image Preview" class="w-full h-auto rounded-xl shadow-lg">
+            </div>
+            <button id="generate-button" class="mt-6 hidden bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-1">
+                Generate Hairstyle
+            </button>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="hidden flex flex-col items-center mt-8">
+            <div class="loading-spinner w-12 h-12 border-4 border-gray-200 rounded-full"></div>
+            <p id="loading-text" class="mt-4 text-white font-medium">Analyzing image...</p>
+        </div>
+
+        <!-- Results Container -->
+        <div id="results-container" class="hidden mt-8 text-left space-y-8">
+            <!-- Recommendation Text -->
+            <div id="recommendation-text-container" class="bg-white bg-opacity-20 p-6 rounded-2xl shadow-inner fade-in">
+                <h2 class="text-2xl font-bold text-white mb-4">Our Recommendation</h2>
+                <p id="recommendation-text" class="text-white text-base md:text-lg"></p>
+            </div>
+
+            <!-- Generated Hairstyle Image -->
+            <div id="generated-image-container" class="flex flex-col items-center bg-white bg-opacity-20 p-6 rounded-2xl shadow-inner fade-in">
+                <h2 class="text-2xl font-bold text-white mb-4">Suggested Hairstyle Example</h2>
+                <img id="generated-image" src="#" alt="Generated Hairstyle" class="w-full max-w-sm h-auto rounded-xl shadow-lg mt-4">
+            </div>
+        </div>
+
+        <!-- Error Message Box -->
+        <div id="error-message" class="hidden mt-8 p-4 bg-red-100 text-red-700 rounded-xl shadow-md">
+            <p id="error-text" class="font-medium"></p>
+        </div>
+    </div>
+
+    <script>
+        // DOM elements
+        const fileInput = document.getElementById('file-upload');
+        const previewControlsContainer = document.getElementById('preview-controls-container');
+        const imagePreview = document.getElementById('image-preview');
+        const generateButton = document.getElementById('generate-button');
+        const loadingSpinner = document.getElementById('loading');
+        const loadingText = document.getElementById('loading-text');
+        const resultsContainer = document.getElementById('results-container');
+        const recommendationText = document.getElementById('recommendation-text');
+        const generatedImage = document.getElementById('generated-image');
+        const errorMessage = document.getElementById('error-message');
+        const errorText = document.getElementById('error-text');
+
+        let uploadedBase64Data = null;
+
+        // Main event listener for file upload
+        fileInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file) {
+                return;
+            }
+
+            // Clear previous results and errors
+            resultsContainer.classList.add('hidden');
+            errorMessage.classList.add('hidden');
+            recommendationText.innerHTML = '';
+
+            // Read the image file and display a preview
+            const reader = new FileReader();
+            reader.onload = async () => {
+                imagePreview.src = reader.result;
+                uploadedBase64Data = reader.result.split(',')[1];
+                previewControlsContainer.classList.remove('hidden');
+                generateButton.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Event listener for the new "Generate" button
+        generateButton.addEventListener('click', async () => {
+            if (!uploadedBase64Data) {
+                displayError("Please upload an image first.");
+                return;
+            }
+
+            // Hide previous results
+            resultsContainer.classList.add('hidden');
+            errorMessage.classList.add('hidden');
+            generateButton.classList.add('hidden');
+
+            try {
+                // Step 1: Get text recommendation
+                loadingText.textContent = "Analyzing image...";
+                loadingSpinner.classList.remove('hidden');
+                const textRecommendation = await getHairstyleRecommendation(uploadedBase64Data);
+
+                // Step 2: Generate image from the text
+                loadingText.textContent = "Generating hairstyle image...";
+                await generateHairstyleImage(textRecommendation);
+
+                // Show the results container
+                resultsContainer.classList.remove('hidden');
+
+            } catch (err) {
+                displayError("An error occurred during generation. Please try again with a different image.");
+                console.error("Error during full generation process:", err);
+            } finally {
+                loadingSpinner.classList.add('hidden');
+                generateButton.classList.remove('hidden');
+            }
+        });
+
+        async function getHairstyleRecommendation(base64ImageData) {
+            const userPrompt = `You are a professional hairstyle consultant. Analyze the face shape and features in this image. Do not mention the person's race, age, gender, or any personal details. Based on what you see, provide a concise and helpful hairstyle recommendation. Explain why the hairstyle would be a good fit for the features. Be positive and encouraging.`;
+
+            const payload = {
+                contents: [
+                    {
+                        role: "user",
+                        parts: [
+                            { text: userPrompt },
+                            {
+                                inlineData: {
+                                    mimeType: "image/jpeg",
+                                    data: base64ImageData
+                                }
+                            }
+                        ]
+                    }
+                ],
+            };
+
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            const response = await fetchWithRetry(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`API request failed with status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            if (text) {
+                recommendationText.innerHTML = text.replace(/\n/g, '<br>');
+                return text;
+            } else {
+                throw new Error("Could not get a text recommendation.");
+            }
+        }
+
+        async function generateHairstyleImage(promptText) {
+            // Refine the prompt to be suitable for image generation
+            const imagePrompt = `A digital illustration of a person with the following hairstyle: "${promptText}". The image should focus on the hair and face, with a neutral background. The style should be modern and clean.`;
+            
+            const payload = { instances: { prompt: imagePrompt }, parameters: { "sampleCount": 1 } };
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+
+            const response = await fetchWithRetry(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`Image generation failed with status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            const base64Data = result?.predictions?.[0]?.bytesBase64Encoded;
+
+            if (base64Data) {
+                generatedImage.src = `data:image/png;base64,${base64Data}`;
+            } else {
+                throw new Error("Could not generate a hairstyle image.");
+            }
+        }
+
+        async function fetchWithRetry(url, options, retries = 3, delay = 1000) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.status !== 429) {
+                        return response;
+                    }
+                    await new Promise(res => setTimeout(res, delay * Math.pow(2, i)));
+                } catch (error) {
+                    if (i === retries - 1) throw error;
+                    await new Promise(res => setTimeout(res, delay * Math.pow(2, i)));
+                }
+            }
+        }
+
+        function displayError(message) {
+            errorText.textContent = message;
+            errorMessage.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
