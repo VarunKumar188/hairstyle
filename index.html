@@ -3,38 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hairstyle Recommender</title>
+    <title>Style Sense</title>
+    <!-- Google Fonts - Montserrat (for titles), Poppins (for general text) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;900&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* Custom CSS Variables for consistent theming */
+        :root {
+            --primary-color: #7F00FF; /* Electric Violet */
+            --secondary-color: #E100FF; /* Neon Pink */
+            --accent-color: #00DBDE; /* Aqua */
+            --text-color-light: #E0F7FA;
+        }
+
         body {
             font-family: 'Poppins', sans-serif;
-            background-image: linear-gradient(to bottom right, #1E3A8A, #14B8A6);
-            background-size: cover;
-            background-attachment: fixed;
-            background-repeat: no-repeat;
+            background: #0D0D1A;
+            color: var(--text-color-light);
             min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
         }
-        .card {
-            background-image: linear-gradient(to top left, #BFDBFE, #A78BFA);
+
+        .background-gradient {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(-45deg, #1f0122, #0d0d1a, #110d18, #0a010c);
+            background-size: 400% 400%;
+            animation: backgroundGradientAnimation 25s ease infinite;
+            z-index: -1;
+        }
+
+        .glass-morphism {
+            background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
-            animation: fadeInScale 0.7s ease-out forwards;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
         }
+
+        /* Animations */
+        @keyframes backgroundGradientAnimation {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes glowing-border {
+            0% { box-shadow: 0 0 5px var(--primary-color), 0 0 10px var(--secondary-color), 0 0 15px var(--primary-color); }
+            50% { box-shadow: 0 0 20px var(--accent-color), 0 0 30px var(--secondary-color), 0 0 40px var(--accent-color); }
+            100% { box-shadow: 0 0 5px var(--primary-color), 0 0 10px var(--secondary-color), 0 0 15px var(--primary-color); }
+        }
+
+        .card {
+            animation: fadeInScale 0.7s ease-out forwards;
+            animation: glowing-border 4s infinite alternate;
+        }
+
         .loading-spinner {
-            border-top-color: #EC4899;
+            border-top-color: var(--secondary-color);
             animation: spin 1s linear infinite;
         }
         @keyframes fadeInScale {
-            from {
-                opacity: 0;
-                transform: scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -47,11 +84,26 @@
             from { opacity: 0; }
             to { opacity: 1; }
         }
+        .fade-out {
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
     </style>
 </head>
-<body class="flex items-center justify-center p-4">
-    <div class="container mx-auto card rounded-3xl shadow-2xl p-6 md:p-10 text-center">
-        <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">Hairstyle Recommender</h1>
+<body class="flex items-center justify-center p-4 relative">
+
+    <!-- Background Gradient Layer -->
+    <div class="background-gradient"></div>
+
+    <!-- Splash Screen -->
+    <div id="splash-screen" class="fixed inset-0 flex flex-col items-center justify-center text-white text-center z-50 bg-[#0D0D1A] transition-opacity duration-1000 ease-in-out">
+        <h1 class="text-6xl md:text-8xl font-black mb-4 animate-pulse" style="font-family: 'Montserrat', sans-serif;">Style Sense</h1>
+        <p class="text-xl md:text-3xl italic px-4 animate-fade-in">"Your vision, styled."</p>
+    </div>
+
+    <!-- Main App Content -->
+    <div id="app-content" class="container mx-auto card glass-morphism rounded-3xl p-6 md:p-10 text-center opacity-0 transition-opacity duration-1000">
+        <h1 class="text-4xl md:text-5xl font-bold text-white mb-4" style="font-family: 'Montserrat', sans-serif;">Style Sense</h1>
         <p class="text-lg text-white mb-8">
             Upload a clear photo of your face to get a personalized hairstyle suggestion.
         </p>
@@ -81,13 +133,13 @@
         <!-- Results Container -->
         <div id="results-container" class="hidden mt-8 text-left space-y-8">
             <!-- Recommendation Text -->
-            <div id="recommendation-text-container" class="bg-white bg-opacity-20 p-6 rounded-2xl shadow-inner fade-in">
+            <div id="recommendation-text-container" class="bg-white bg-opacity-10 p-6 rounded-2xl shadow-inner fade-in">
                 <h2 class="text-2xl font-bold text-white mb-4">Our Recommendation</h2>
                 <p id="recommendation-text" class="text-white text-base md:text-lg"></p>
             </div>
 
             <!-- Generated Hairstyle Image -->
-            <div id="generated-image-container" class="flex flex-col items-center bg-white bg-opacity-20 p-6 rounded-2xl shadow-inner fade-in">
+            <div id="generated-image-container" class="flex flex-col items-center bg-white bg-opacity-10 p-6 rounded-2xl shadow-inner fade-in">
                 <h2 class="text-2xl font-bold text-white mb-4">Suggested Hairstyle Example</h2>
                 <img id="generated-image" src="#" alt="Generated Hairstyle" class="w-full max-w-sm h-auto rounded-xl shadow-lg mt-4">
             </div>
@@ -101,6 +153,8 @@
 
     <script>
         // DOM elements
+        const splashScreen = document.getElementById('splash-screen');
+        const appContent = document.getElementById('app-content');
         const fileInput = document.getElementById('file-upload');
         const previewControlsContainer = document.getElementById('preview-controls-container');
         const imagePreview = document.getElementById('image-preview');
@@ -114,6 +168,18 @@
         const errorText = document.getElementById('error-text');
 
         let uploadedBase64Data = null;
+
+        // Animate splash screen on window load
+        window.onload = () => {
+            setTimeout(() => {
+                splashScreen.classList.add('fade-out');
+                splashScreen.addEventListener('transitionend', () => {
+                    splashScreen.style.display = 'none';
+                    appContent.classList.remove('opacity-0');
+                    appContent.classList.add('opacity-100');
+                }, { once: true });
+            }, 3000); // Display for 3 seconds
+        };
 
         // Main event listener for file upload
         fileInput.addEventListener('change', async (event) => {
@@ -151,14 +217,20 @@
             generateButton.classList.add('hidden');
 
             try {
-                // Step 1: Get text recommendation
                 loadingText.textContent = "Analyzing image...";
                 loadingSpinner.classList.remove('hidden');
-                const textRecommendation = await getHairstyleRecommendation(uploadedBase64Data);
+
+                // Step 1: Check if a face is present and get text recommendation
+                const recommendation = await getHairstyleRecommendation(uploadedBase64Data);
+
+                if (recommendation.toLowerCase().includes("no face recognized")) {
+                    displayError("No face recognized in the image. Please try again with a clear photo of your face.");
+                    return;
+                }
 
                 // Step 2: Generate image from the text
                 loadingText.textContent = "Generating hairstyle image...";
-                await generateHairstyleImage(textRecommendation);
+                await generateHairstyleImage(recommendation);
 
                 // Show the results container
                 resultsContainer.classList.remove('hidden');
@@ -173,7 +245,7 @@
         });
 
         async function getHairstyleRecommendation(base64ImageData) {
-            const userPrompt = `You are a professional hairstyle consultant. Analyze the face shape and features in this image. Do not mention the person's race, age, gender, or any personal details. Based on what you see, provide a concise and helpful hairstyle recommendation. Explain why the hairstyle would be a good fit for the features. Be positive and encouraging.`;
+            const userPrompt = `You are a professional hairstyle consultant. First, determine if a human face is clearly visible in the image. If not, respond with the exact phrase "No face recognized." If a face is visible, then analyze the face shape and features. Do not mention the person's race, age, gender, or any personal details. Based on what you see, provide a concise and helpful hairstyle recommendation. Explain why the hairstyle would be a good fit for the features. Be positive and encouraging.`;
 
             const payload = {
                 contents: [
