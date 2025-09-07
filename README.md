@@ -1,5 +1,5 @@
 
-## Hairstyle Recommender ✨
+## Style Sense ✨
 
 The **Hairstyle Recommender** is a web-based application that suggests personalized hairstyles based on a user’s uploaded photo. Using AI-powered image analysis, the app evaluates facial features and provides hairstyle recommendations along with a generated hairstyle example image.
 
