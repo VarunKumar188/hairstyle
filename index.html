@@ -136,6 +136,15 @@
             <div id="recommendation-text-container" class="bg-white bg-opacity-10 p-6 rounded-2xl shadow-inner fade-in">
                 <h2 class="text-2xl font-bold text-white mb-4">Our Recommendation</h2>
                 <p id="recommendation-text" class="text-white text-base md:text-lg"></p>
+                <!-- Image Generation Button -->
+                <button id="generate-image-button" class="mt-6 hidden bg-violet-500 hover:bg-violet-600 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-1">
+                    Visualize Hairstyle
+                </button>
+            </div>
+            <!-- Generated Image -->
+            <div id="generated-image-container" class="hidden mt-8 text-center fade-in">
+                <h2 class="text-2xl font-bold text-white mb-4">Visual Hairstyle Suggestion</h2>
+                <img id="generated-image" src="#" alt="Generated Hairstyle" class="w-full max-w-sm mx-auto h-auto rounded-xl shadow-lg">
             </div>
         </div>
 
@@ -153,14 +162,18 @@
         const previewControlsContainer = document.getElementById('preview-controls-container');
         const imagePreview = document.getElementById('image-preview');
         const generateButton = document.getElementById('generate-button');
+        const generateImageButton = document.getElementById('generate-image-button');
         const loadingSpinner = document.getElementById('loading');
         const loadingText = document.getElementById('loading-text');
         const resultsContainer = document.getElementById('results-container');
         const recommendationText = document.getElementById('recommendation-text');
+        const generatedImageContainer = document.getElementById('generated-image-container');
+        const generatedImage = document.getElementById('generated-image');
         const errorMessage = document.getElementById('error-message');
         const errorText = document.getElementById('error-text');
 
         let uploadedBase64Data = null;
+        let lastRecommendation = "";
 
         // Animate splash screen on window load
         window.onload = () => {
@@ -185,6 +198,10 @@
             resultsContainer.classList.add('hidden');
             errorMessage.classList.add('hidden');
             recommendationText.innerHTML = '';
+            generatedImageContainer.classList.add('hidden');
+            generatedImage.src = '';
+            generateImageButton.classList.add('hidden');
+
 
             // Read the image file and display a preview
             const reader = new FileReader();
@@ -197,17 +214,21 @@
             reader.readAsDataURL(file);
         });
 
-        // Event listener for the new "Generate" button
+        // Event listener for the "Get Recommendation" button
         generateButton.addEventListener('click', async () => {
             if (!uploadedBase64Data) {
                 displayError("Please upload an image first.");
                 return;
             }
 
-            // Hide previous results
+            // Hide previous results and errors
             resultsContainer.classList.add('hidden');
             errorMessage.classList.add('hidden');
             generateButton.classList.add('hidden');
+            generatedImageContainer.classList.add('hidden');
+            generatedImage.src = '';
+            generateImageButton.classList.add('hidden');
+
 
             try {
                 loadingText.textContent = "Analyzing image and generating recommendation...";
@@ -220,10 +241,13 @@
                     displayError("No face recognized in the image. Please try again with a clear photo of your face.");
                     return;
                 }
-
+                
+                lastRecommendation = recommendation;
+                
                 // Show the results container and text recommendation
                 resultsContainer.classList.remove('hidden');
                 recommendationText.innerHTML = recommendation.replace(/\n/g, '<br>');
+                generateImageButton.classList.remove('hidden');
 
             } catch (err) {
                 displayError("An error occurred during generation. Please try again with a different image.");
@@ -234,14 +258,42 @@
             }
         });
 
+        // Event listener for the "Generate Hairstyle Image" button
+        generateImageButton.addEventListener('click', async () => {
+            if (!lastRecommendation) {
+                displayError("Please get a text recommendation first.");
+                return;
+            }
+
+            // Hide previous image and button
+            generatedImageContainer.classList.add('hidden');
+            generateImageButton.classList.add('hidden');
+
+            try {
+                loadingText.textContent = "Creating your hairstyle image...";
+                loadingSpinner.classList.remove('hidden');
+
+                const imagePrompt = `Generate a realistic image of a person with the following hairstyle: ${lastRecommendation}. The image should focus on the hairstyle and be clear and high-quality.`;
+                const imageDataUrl = await generateHairstyleImage(imagePrompt);
+
+                generatedImage.src = imageDataUrl;
+                generatedImageContainer.classList.remove('hidden');
+            } catch (err) {
+                displayError("An error occurred while generating the image. Please try again.");
+                console.error("Image generation error:", err);
+            } finally {
+                loadingSpinner.classList.add('hidden');
+                generateImageButton.classList.remove('hidden');
+            }
+        });
+
         async function getHairstyleRecommendation(base64ImageData) {
             const userPrompt = `You are a professional hairstyle consultant. First, determine if a human face is clearly visible in the image. If not, respond with the exact phrase "No face recognized." If a face is visible, then analyze the face shape and features. Do not mention the person's race, age, gender, or any personal details. Based on what you see, provide a concise and helpful hairstyle recommendation. Explain why the hairstyle would be a good fit for the features. Be positive and encouraging.`;
             
-            // NOTE: When running locally, you must provide your own API key here.
-            // When running in the Canvas environment, the key will be automatically provided.
-            const apiKey = typeof __initial_auth_token !== 'undefined' ? '' : 'AIzaSyB3ZGdPeoTarirWxMY8GeE_e1boLczBJyU';
-
+            const apiKey = typeof __initial_auth_token !== 'undefined' ? '' : 'AIzaSyB3ZGdPeoTarirWxMY8GeE_e1boLczBJyU'; // Replace with your actual API key
+            
             if (apiKey === "" && typeof __initial_auth_token === 'undefined') {
+                displayError("API Key is missing. Please add your key to run this locally.");
                 throw new Error("API Key is missing. Please add your key to run this locally.");
             }
 
@@ -281,6 +333,44 @@
                 return text;
             } else {
                 throw new Error("Could not get a text recommendation.");
+            }
+        }
+
+        async function generateHairstyleImage(prompt) {
+            const apiKey = typeof __initial_auth_token !== 'undefined' ? '' : 'AIzaSyB3ZGdPeoTarirWxMY8GeE_e1boLczBJyU'; // Replace with your actual API key
+            if (apiKey === "" && typeof __initial_auth_token === 'undefined') {
+                displayError("API Key is missing. Please add your key to run this locally.");
+                throw new Error("API Key is missing. Please add your key to run this locally.");
+            }
+
+            const payload = {
+                contents: [{
+                    parts: [{ text: prompt }]
+                }],
+                generationConfig: {
+                    responseModalities: ['TEXT', 'IMAGE']
+                },
+            };
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
+            
+            const response = await fetchWithRetry(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`API request failed with status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            const base64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+
+            if (base64Data) {
+                return `data:image/png;base64,${base64Data}`;
+            } else {
+                throw new Error("Could not get a generated image.");
             }
         }
 
